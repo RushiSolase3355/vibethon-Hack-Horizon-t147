@@ -29,13 +29,13 @@ export function ModuleModal({
       {module ? (
         <motion.div
           animate={{ opacity: 1 }}
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-midnight/80 px-4 py-8 backdrop-blur-md"
+          className="fixed inset-0 z-[60] overflow-y-auto bg-midnight/80 px-4 py-8 backdrop-blur-md"
           exit={{ opacity: 0 }}
           initial={{ opacity: 0 }}
         >
           <motion.div
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            className="glass relative w-full max-w-3xl rounded-lg border border-cyanGlow/20 p-6 shadow-[0_0_60px_rgba(45,212,255,0.16)]"
+            className="glass relative mx-auto w-full max-w-3xl overflow-y-auto rounded-lg border border-cyanGlow/20 p-6 shadow-[0_0_60px_rgba(45,212,255,0.16)] max-h-[calc(100vh-4rem)]"
             exit={{ opacity: 0, y: 12, scale: 0.98 }}
             initial={{ opacity: 0, y: 18, scale: 0.98 }}
           >
