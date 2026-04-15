@@ -39,12 +39,12 @@ export function ModulesExperience() {
     return groups;
   }, [filteredModules]);
 
-  const handleAdvance = () => {
+  const handleAdvance = async () => {
     if (!selectedModule) {
       return;
     }
 
-    completeModuleLesson(selectedModule.id);
+    await completeModuleLesson(selectedModule.id);
     const nextLessons = (state.moduleLessonsCompleted[selectedModule.id] ?? 0) + 1;
 
     if (nextLessons >= 3) {

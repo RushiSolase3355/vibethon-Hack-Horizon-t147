@@ -8,10 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAimlverseState } from "@/hooks/use-aimlverse-state";
 
-export const metadata = {
-  title: "Register | AIMLverse"
-};
-
 export default function RegisterPage() {
   const router = useRouter();
   const { registerUser } = useAimlverseState();
@@ -20,9 +16,9 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const result = registerUser(name, email, password);
+    const result = await registerUser(name, email, password);
 
     if (!result.success) {
       setError(result.message ?? "Unable to create account.");

@@ -16,62 +16,21 @@ const quickPrompts = [
   "What is computer vision?"
 ];
 
-function getMentorReply(message: string) {
-  const normalized = message.trim().toLowerCase();
-
-  if (normalized.includes("computer vision")) {
-    return {
-      topic: "Computer Vision",
-      answer:
-        "Computer Vision teaches machines to understand images and video. It powers tasks like classification, detection, recognition, and scene understanding."
-    };
-  }
-
-  if (normalized.includes("neural")) {
-    return {
-      topic: "Neural Network",
-      answer:
-        "A neural network is a layered model that transforms inputs through hidden layers and learns useful patterns for prediction."
-    };
-  }
-
-  if (normalized.includes("nlp")) {
-    return {
-      topic: "NLP",
-      answer:
-        "NLP stands for Natural Language Processing. It helps machines understand and generate human language for tasks like sentiment analysis and chat."
-    };
-  }
-
-  if (normalized.includes("machine learning") || normalized.includes("ml")) {
-    return {
-      topic: "ML",
-      answer:
-        "Machine learning is a branch of AI where models learn patterns from data instead of following only hard-coded rules."
-    };
-  }
-
-  return {
-    topic: "AI",
-    answer:
-      "AI is the broader goal of building systems that can reason, predict, or assist intelligently. ML, NLP, and Computer Vision all live inside AI."
-  };
-}
-
 export function MentorExperience() {
-  const { state, recordMentorExchange, stats } = useAimlverseState();
+  const { state, askMentor, stats } = useAimlverseState();
   const [input, setInput] = useState("");
   const conversation = useMemo(() => state.chatHistory.slice(-12), [state.chatHistory]);
 
-  const submitPrompt = (value: string) => {
+  const submitPrompt = async (value: string) => {
     const trimmed = value.trim();
     if (!trimmed) {
       return;
     }
 
-    const reply = getMentorReply(trimmed);
-    recordMentorExchange(trimmed, reply.answer, reply.topic);
-    setInput("");
+    const result = await askMentor(trimmed);
+    if (result.success) {
+      setInput("");
+    }
   };
 
   return (
@@ -136,7 +95,7 @@ export function MentorExperience() {
                 <button
                   className="rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-sm text-slate-200 transition hover:-translate-y-0.5 hover:border-cyanGlow/40 hover:bg-cyanGlow/10 hover:text-white"
                   key={prompt}
-                  onClick={() => submitPrompt(prompt)}
+                  onClick={() => void submitPrompt(prompt)}
                   type="button"
                 >
                   {prompt}
@@ -151,13 +110,13 @@ export function MentorExperience() {
                 onKeyDown={(event) => {
                   if (event.key === "Enter") {
                     event.preventDefault();
-                    submitPrompt(input);
+                    void submitPrompt(input);
                   }
                 }}
                 placeholder="Ask about AI, ML, NLP, neural networks, or computer vision..."
                 value={input}
               />
-              <Button onClick={() => submitPrompt(input)}>
+              <Button onClick={() => void submitPrompt(input)}>
                 <Send className="h-4 w-4" />
                 Send
               </Button>

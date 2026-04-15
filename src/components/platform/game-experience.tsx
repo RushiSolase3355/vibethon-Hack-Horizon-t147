@@ -50,7 +50,7 @@ export function GameExperience() {
     setClassificationIndex(nextIndex);
 
     if (nextIndex >= classificationItems.length) {
-      recordGameResult("Classification Sort", nextScore >= 2, nextScore);
+      void recordGameResult("Classification Sort", nextScore >= 2, nextScore);
     }
   };
 
@@ -68,7 +68,7 @@ export function GameExperience() {
     setDecisionIndex(nextIndex);
 
     if (nextIndex >= decisionQuestions.length) {
-      recordGameResult("Decision Tree Choice", nextScore >= 1, nextScore);
+      void recordGameResult("Decision Tree Choice", nextScore >= 1, nextScore);
     }
   };
 
@@ -83,7 +83,7 @@ export function GameExperience() {
     if (next.length === memorySequence.length) {
       const won = next.join("|") === memorySequence.join("|");
       setMemoryComplete(true);
-      recordGameResult("Neural Path Memory", won, won ? 3 : 1);
+      void recordGameResult("Neural Path Memory", won, won ? 3 : 1);
     }
   };
 

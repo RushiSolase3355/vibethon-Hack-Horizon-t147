@@ -8,10 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAimlverseState } from "@/hooks/use-aimlverse-state";
 
-export const metadata = {
-  title: "Login | AIMLverse"
-};
-
 export default function LoginPage() {
   const router = useRouter();
   const { loginUser } = useAimlverseState();
@@ -19,9 +15,9 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const result = loginUser(email, password);
+    const result = await loginUser(email, password);
 
     if (!result.success) {
       setError(result.message ?? "Unable to login.");

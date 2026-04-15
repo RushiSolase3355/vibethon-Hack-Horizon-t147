@@ -62,12 +62,10 @@ export function DashboardExperience() {
     }
   ];
 
-  const handleClaimDailyXp = () => {
+  const handleClaimDailyXp = async () => {
     setIsClaiming(true);
-    window.setTimeout(() => {
-      claimDailyXp();
-      setIsClaiming(false);
-    }, 400);
+    await claimDailyXp();
+    setIsClaiming(false);
   };
 
   return (

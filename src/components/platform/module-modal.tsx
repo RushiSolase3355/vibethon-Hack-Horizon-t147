@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Clock3, Layers3, Star, X } from "lucide-react";
+import { BookOpen, Clock3, ExternalLink, Layers3, PlayCircle, Star, X } from "lucide-react";
 import { type ModuleDefinition } from "@/data/platform-data";
 import { Button } from "@/components/ui/button";
 
@@ -78,6 +78,66 @@ export function ModuleModal({
             </div>
 
             <div className="mt-8 rounded-lg border border-white/10 bg-white/[0.04] p-5">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyanGlow">
+                Why this matters
+              </p>
+              <p className="mt-3 leading-7 text-slate-300">{module.whyItMatters}</p>
+
+              <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                {module.learningPoints.map((point) => (
+                  <div
+                    className="rounded-lg border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-slate-200"
+                    key={point}
+                  >
+                    {point}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-6 rounded-lg border border-white/10 bg-white/[0.04] p-5">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyanGlow">
+                    Free learning resources
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-slate-400">
+                    Open public videos and articles in a new tab for deeper learning.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-5 grid gap-3">
+                {module.resources.map((resource) => {
+                  const Icon = resource.kind === "Video" ? PlayCircle : BookOpen;
+
+                  return (
+                    <a
+                      className="flex items-center justify-between gap-4 rounded-lg border border-white/10 bg-white/[0.04] px-4 py-4 text-left transition hover:border-cyanGlow/30 hover:bg-white/[0.07]"
+                      href={resource.url}
+                      key={resource.url}
+                      rel="noreferrer"
+                      target="_blank"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="mt-0.5 rounded-lg border border-cyanGlow/25 bg-cyanGlow/10 p-2">
+                          <Icon className="h-4 w-4 text-cyanGlow" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                            {resource.kind}
+                          </p>
+                          <p className="mt-1 text-sm font-semibold text-white">{resource.title}</p>
+                        </div>
+                      </div>
+                      <ExternalLink className="h-4 w-4 shrink-0 text-slate-500" />
+                    </a>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="mt-6 rounded-lg border border-white/10 bg-white/[0.04] p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyanGlow">
                 Lesson {currentStep}
               </p>

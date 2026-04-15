@@ -55,7 +55,7 @@ export function SimulationExperience() {
             onClick={() => {
               const result = analyzeSpam(spamInput);
               setSpamResult(result);
-              recordSimulation("spam", spamInput, result);
+              void recordSimulation("spam", spamInput, result);
             }}
           >
             <Radar className="h-4 w-4" />
@@ -72,7 +72,7 @@ export function SimulationExperience() {
                 key={image.label}
                 onClick={() => {
                   setImageResult(image.result);
-                  recordSimulation("image", image.label, image.result);
+                  void recordSimulation("image", image.label, image.result);
                 }}
                 variant="secondary"
               >
@@ -96,7 +96,7 @@ export function SimulationExperience() {
             onClick={() => {
               const result = predictStudentScore(Number(studyHours));
               setStudentResult(result);
-              recordSimulation("student", `${studyHours} hours`, result);
+              void recordSimulation("student", `${studyHours} hours`, result);
             }}
           >
             Predict Score

@@ -1,0 +1,41 @@
+[
+  {
+    "id": "user-1776242094381-ai1pt",
+    "name": "Rushikesh",
+    "email": "rushisolase3@gmail.com",
+    "password": "123456789",
+    "xp": 120,
+    "level": 1,
+    "rank": 1,
+    "completedModules": [],
+    "currentModule": "intro-ai",
+    "moduleLessonsCompleted": {
+      "intro-ai": 1,
+      "ml-basics": 0,
+      "classification": 0,
+      "neural-networks": 0,
+      "nlp": 0,
+      "computer-vision": 0
+    },
+    "quizScores": [],
+    "quizAverage": 0,
+    "quizAttempts": 0,
+    "quizHistory": [],
+    "gamesPlayed": 0,
+    "gamesWon": 0,
+    "bestScore": 0,
+    "streak": 0,
+    "badges": [
+      "first-login"
+    ],
+    "chatHistory": [],
+    "simulationHistory": [],
+    "dailyActivity": [
+      "2026-04-15"
+    ],
+    "dailyXpClaimedDate": "2026-04-15",
+    "messagesCount": 0,
+    "topicsAsked": [],
+    "createdAt": "2026-04-15T08:34:54.381Z"
+  }
+]

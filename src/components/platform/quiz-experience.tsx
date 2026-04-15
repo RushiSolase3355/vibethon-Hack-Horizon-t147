@@ -83,7 +83,7 @@ export function QuizExperience() {
       return;
     }
 
-    recordQuizAttempt(score, quizQuestions.length);
+      void recordQuizAttempt(score, quizQuestions.length);
     setHasRecorded(true);
   }, [hasRecorded, isFinished, recordQuizAttempt, score]);
 

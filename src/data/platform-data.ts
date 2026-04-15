@@ -36,6 +36,8 @@ export type ModuleDefinition = {
   level: Exclude<ModuleLevel, "All">;
   summary: string;
   description: string;
+  whyItMatters: string;
+  learningPoints: string[];
   example: string;
   estimatedTime: string;
   xpReward: number;
@@ -43,6 +45,11 @@ export type ModuleDefinition = {
   icon: LucideIcon;
   concept: string;
   walkthrough: string;
+  resources: {
+    title: string;
+    url: string;
+    kind: "Video" | "Article" | "Course";
+  }[];
   quiz: {
     question: string;
     options: string[];
@@ -66,6 +73,13 @@ export const moduleDefinitions: ModuleDefinition[] = [
     summary: "Understand where AI appears and how it differs from simple automation.",
     description:
       "Begin with what artificial intelligence means in real products, what kinds of problems it solves, and why data matters.",
+    whyItMatters:
+      "This module helps learners connect AI to everyday apps like recommendations, assistants, and search so the field feels practical instead of abstract.",
+    learningPoints: [
+      "How AI differs from simple rule-based automation",
+      "Where AI appears in everyday products",
+      "Why data is essential for intelligent behavior"
+    ],
     example: "Recommendation systems and smart assistants",
     estimatedTime: "18 min",
     xpReward: 80,
@@ -75,6 +89,18 @@ export const moduleDefinitions: ModuleDefinition[] = [
       "AI is the broad goal of making systems behave intelligently. Some systems use rules, while others learn from data.",
     walkthrough:
       "A movie recommendation engine studies viewing patterns and suggests what you are likely to enjoy next.",
+    resources: [
+      {
+        title: "YouTube: Intro to AI for beginners",
+        url: "https://www.youtube.com/results?search_query=intro+to+artificial+intelligence+for+beginners",
+        kind: "Video"
+      },
+      {
+        title: "IBM: What is Artificial Intelligence?",
+        url: "https://www.ibm.com/topics/artificial-intelligence",
+        kind: "Article"
+      }
+    ],
     quiz: {
       question: "Which statement best describes AI?",
       options: [
@@ -94,6 +120,13 @@ export const moduleDefinitions: ModuleDefinition[] = [
     summary: "Learn how machines discover patterns from examples and improve predictions.",
     description:
       "This module introduces datasets, features, labels, training, and why evaluation matters.",
+    whyItMatters:
+      "It gives learners the basic language of machine learning so later topics like classification and neural networks make sense.",
+    learningPoints: [
+      "What datasets, features, and labels mean",
+      "How models learn from examples during training",
+      "Why evaluation matters before using predictions"
+    ],
     example: "Predicting student scores from study habits",
     estimatedTime: "24 min",
     xpReward: 90,
@@ -103,6 +136,23 @@ export const moduleDefinitions: ModuleDefinition[] = [
       "Machine learning is an AI approach where systems learn patterns from historical examples rather than relying only on hand-written rules.",
     walkthrough:
       "If we show a model study hours and exam outcomes, it can learn relationships that help predict future scores.",
+    resources: [
+      {
+        title: "YouTube: Machine learning basics for beginners",
+        url: "https://www.youtube.com/results?search_query=machine+learning+basics+for+beginners",
+        kind: "Video"
+      },
+      {
+        title: "Google for Developers: Introduction to Machine Learning",
+        url: "https://developers.google.com/machine-learning/intro-to-ml",
+        kind: "Course"
+      },
+      {
+        title: "Google for Developers: What is Machine Learning?",
+        url: "https://developers.google.com/machine-learning/intro-to-ml/what-is-ml",
+        kind: "Article"
+      }
+    ],
     quiz: {
       question: "What are labels in a supervised ML dataset?",
       options: [
@@ -122,6 +172,13 @@ export const moduleDefinitions: ModuleDefinition[] = [
     summary: "Train models to sort inputs into useful categories with confidence.",
     description:
       "Classification is one of the most visible ML tasks because it maps real inputs to labels.",
+    whyItMatters:
+      "Classification powers many real products such as spam filters, fraud alerts, medical screening tools, and content moderation systems.",
+    learningPoints: [
+      "How models assign categories to inputs",
+      "The difference between binary and multi-class classification",
+      "Why confidence and evaluation metrics matter"
+    ],
     example: "Spam vs non-spam email detection",
     estimatedTime: "28 min",
     xpReward: 110,
@@ -131,6 +188,18 @@ export const moduleDefinitions: ModuleDefinition[] = [
       "A classifier predicts which category an input belongs to by learning from labeled examples.",
     walkthrough:
       "A mail model can look at words such as 'free' or 'urgent' and predict whether a message is spam.",
+    resources: [
+      {
+        title: "YouTube: Classification in machine learning explained",
+        url: "https://www.youtube.com/results?search_query=classification+in+machine+learning+for+beginners",
+        kind: "Video"
+      },
+      {
+        title: "Google ML Crash Course: Classification",
+        url: "https://developers.google.com/machine-learning/crash-course/classification",
+        kind: "Course"
+      }
+    ],
     quiz: {
       question: "Which task is a classification problem?",
       options: [
@@ -150,6 +219,13 @@ export const moduleDefinitions: ModuleDefinition[] = [
     summary: "See how layered models learn richer patterns from data.",
     description:
       "Neural networks pass inputs through weighted layers that gradually learn meaningful patterns.",
+    whyItMatters:
+      "Neural networks sit behind modern vision, speech, recommendation, and language systems, so they are a key step toward understanding modern AI.",
+    learningPoints: [
+      "What input, hidden, and output layers do",
+      "How networks learn patterns through weights",
+      "Why neural nets work well on complex data"
+    ],
     example: "Digit recognition from image pixels",
     estimatedTime: "34 min",
     xpReward: 130,
@@ -159,6 +235,18 @@ export const moduleDefinitions: ModuleDefinition[] = [
       "A neural network is made of layers of connected units. Each layer transforms data and helps capture deeper relationships.",
     walkthrough:
       "An image classifier might learn edges first, then shapes, then full object patterns like digits or faces.",
+    resources: [
+      {
+        title: "YouTube: Neural networks for beginners",
+        url: "https://www.youtube.com/results?search_query=neural+networks+for+beginners",
+        kind: "Video"
+      },
+      {
+        title: "Google ML Crash Course: Neural networks",
+        url: "https://developers.google.com/machine-learning/crash-course/neural-networks",
+        kind: "Course"
+      }
+    ],
     quiz: {
       question: "What is a hidden layer in a neural network?",
       options: [
@@ -178,6 +266,13 @@ export const moduleDefinitions: ModuleDefinition[] = [
     summary: "Work with text understanding, classification, and conversational intelligence.",
     description:
       "Natural Language Processing helps machines understand and generate human language.",
+    whyItMatters:
+      "This module connects AI to chatbots, translation, summarization, and search, which are some of the most visible user-facing applications today.",
+    learningPoints: [
+      "What NLP means in real products",
+      "Common text tasks like sentiment analysis and summarization",
+      "How machines turn language into structured patterns"
+    ],
     example: "Sentiment analysis on product reviews",
     estimatedTime: "30 min",
     xpReward: 120,
@@ -187,6 +282,18 @@ export const moduleDefinitions: ModuleDefinition[] = [
       "NLP focuses on text and speech tasks such as sentiment analysis, summarization, translation, and chat.",
     walkthrough:
       "A review model might detect whether a customer comment is positive, neutral, or negative.",
+    resources: [
+      {
+        title: "YouTube: NLP tutorial for beginners",
+        url: "https://www.youtube.com/results?search_query=natural+language+processing+for+beginners",
+        kind: "Video"
+      },
+      {
+        title: "IBM: What is Natural Language Processing?",
+        url: "https://www.ibm.com/topics/natural-language-processing",
+        kind: "Article"
+      }
+    ],
     quiz: {
       question: "Which field handles language tasks such as sentiment analysis?",
       options: ["NLP", "Computer Graphics", "Networking", "Spreadsheet Modeling"],
@@ -201,6 +308,13 @@ export const moduleDefinitions: ModuleDefinition[] = [
     summary: "Understand how visual models move from pixels to meaningful predictions.",
     description:
       "Computer Vision studies how machines interpret images and video for tasks like detection and recognition.",
+    whyItMatters:
+      "Computer vision powers face unlock, medical imaging support, manufacturing inspection, and autonomous driving systems.",
+    learningPoints: [
+      "How models read patterns from images and video",
+      "The difference between recognition, detection, and classification",
+      "Where computer vision appears in real products"
+    ],
     example: "Classifying fruit images",
     estimatedTime: "36 min",
     xpReward: 140,
@@ -210,6 +324,18 @@ export const moduleDefinitions: ModuleDefinition[] = [
       "Computer Vision models learn visual patterns like edges, textures, and shapes from image data.",
     walkthrough:
       "A fruit classifier might learn color and contour patterns to separate apples, bananas, and oranges.",
+    resources: [
+      {
+        title: "YouTube: Computer vision tutorial for beginners",
+        url: "https://www.youtube.com/results?search_query=computer+vision+for+beginners",
+        kind: "Video"
+      },
+      {
+        title: "IBM: What is Computer Vision?",
+        url: "https://www.ibm.com/think/topics/computer-vision",
+        kind: "Article"
+      }
+    ],
     quiz: {
       question: "Which AI area focuses on images and video?",
       options: ["Computer Vision", "NLP", "Database Design", "Spreadsheet Logic"],

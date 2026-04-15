@@ -3,24 +3,18 @@
 import { createContext, useCallback, useEffect, useMemo, useState } from "react";
 import { ToastStack, type ToastItem } from "@/components/ui/toast-stack";
 import {
+  AIMLVERSE_SESSION_KEY,
   AIMLVERSE_STORAGE_KEY,
-  addDailyActivity,
-  type ChatEntry,
   createId,
-  deriveState,
   getCompletedModuleCount,
   getModuleProgress,
-  getNewBadges,
-  getStoredUser,
   getToday,
   getUserLeaderboard,
   isModuleUnlocked,
-  loginSession,
-  logoutSession,
-  parseStoredState,
-  registerSession,
+  toAppState,
   type AppState,
-  type QuizHistoryEntry,
+  type ChatEntry,
+  type PublicUser,
   type SimulationEntry,
   type ToastRecord
 } from "@/lib/aimlverse-state";
@@ -29,6 +23,11 @@ import { moduleDefinitions, type BadgeId, type ModuleId } from "@/data/platform-
 type ActionResult = {
   success: boolean;
   message?: string;
+};
+
+type MentorResult = ActionResult & {
+  answer?: string;
+  topic?: string;
 };
 
 type AimlverseContextValue = {
@@ -50,38 +49,41 @@ type AimlverseContextValue = {
   leaderboard: Array<{ id: string; name: string; xp: number; rank: number; isCurrentUser: boolean }>;
   getModuleProgress: (moduleId: ModuleId) => number;
   isModuleUnlocked: (moduleId: ModuleId) => boolean;
-  registerUser: (userName: string, email: string, password: string) => ActionResult;
-  loginUser: (email: string, password: string) => ActionResult;
+  registerUser: (userName: string, email: string, password: string) => Promise<ActionResult>;
+  loginUser: (email: string, password: string) => Promise<ActionResult>;
   logoutUser: () => void;
-  claimDailyXp: () => ActionResult;
-  completeModuleLesson: (moduleId: ModuleId) => { unlockedBadges: BadgeId[]; completedModule: boolean };
-  recordQuizAttempt: (score: number, total: number) => { unlockedBadges: BadgeId[]; xpAwarded: number };
-  recordGameResult: (game: string, won: boolean, score: number) => { unlockedBadges: BadgeId[]; xpAwarded: number };
-  recordMentorExchange: (question: string, answer: string, topic: string) => { unlockedBadges: BadgeId[] };
-  recordSimulation: (type: "spam" | "image" | "student", input: string, result: string) => void;
+  claimDailyXp: () => Promise<ActionResult>;
+  completeModuleLesson: (moduleId: ModuleId) => Promise<{ unlockedBadges: BadgeId[]; completedModule: boolean }>;
+  recordQuizAttempt: (score: number, total: number) => Promise<{ unlockedBadges: BadgeId[]; xpAwarded: number }>;
+  recordGameResult: (game: string, won: boolean, score: number) => Promise<{ unlockedBadges: BadgeId[]; xpAwarded: number }>;
+  askMentor: (question: string) => Promise<MentorResult>;
+  recordSimulation: (type: "spam" | "image" | "student", input: string, result: string) => Promise<void>;
   addToast: (toast: ToastRecord) => void;
   dismissToast: (id: string) => void;
 };
 
 export const AimlverseContext = createContext<AimlverseContextValue | null>(null);
 
+async function fetchJson<T>(input: RequestInfo, init?: RequestInit) {
+  const response = await fetch(input, {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...(init?.headers ?? {})
+    }
+  });
+
+  const data = (await response.json()) as T & { success?: boolean; message?: string };
+  if (!response.ok) {
+    throw new Error(data.message ?? "Request failed.");
+  }
+  return data;
+}
+
 export function AimlverseProvider({ children }: { children: React.ReactNode }) {
-  const [state, setState] = useState<AppState>(parseStoredState(null));
+  const [state, setState] = useState<AppState>(toAppState(null));
   const [isHydrated, setIsHydrated] = useState(false);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
-
-  useEffect(() => {
-    setState(parseStoredState(window.localStorage.getItem(AIMLVERSE_STORAGE_KEY)));
-    setIsHydrated(true);
-  }, []);
-
-  useEffect(() => {
-    if (!isHydrated) {
-      return;
-    }
-
-    window.localStorage.setItem(AIMLVERSE_STORAGE_KEY, JSON.stringify(state));
-  }, [isHydrated, state]);
 
   const dismissToast = useCallback((id: string) => {
     setToasts((current) => current.filter((toast) => toast.id !== id));
@@ -89,18 +91,69 @@ export function AimlverseProvider({ children }: { children: React.ReactNode }) {
 
   const addToast = useCallback((toast: ToastRecord) => {
     setToasts((current) => [...current, toast]);
-    window.setTimeout(() => {
-      dismissToast(toast.id);
-    }, 3200);
+    window.setTimeout(() => dismissToast(toast.id), 3200);
   }, [dismissToast]);
 
-  const updateState = useCallback((updater: (current: AppState) => AppState) => {
-    const previous = state;
-    const next = deriveState(updater(previous));
-    const unlockedBadges = getNewBadges(previous, next);
-    setState(next);
+  const syncUser = useCallback(async (email: string) => {
+    const data = await fetchJson<{ success: true; user: PublicUser }>(`/api/user/profile?email=${encodeURIComponent(email)}`);
+    setState((current) => ({
+      ...toAppState(data.user),
+      leaderboardUsers: current.leaderboardUsers
+    }));
+    window.localStorage.setItem(AIMLVERSE_STORAGE_KEY, JSON.stringify(data.user));
+    return data.user;
+  }, []);
 
-    unlockedBadges.forEach((badgeId) => {
+  const refreshLeaderboard = useCallback(async () => {
+    const data = await fetchJson<{ success: true; users: Array<{ rank: number; name: string; email: string; xp: number }> }>("/api/leaderboard");
+    setState((current) => ({
+      ...current,
+      leaderboardUsers: data.users.map((user) => ({
+        id: user.email,
+        name: user.name,
+        xp: user.xp
+      }))
+    }));
+  }, []);
+
+  const syncAll = useCallback(async (email: string) => {
+    await Promise.all([syncUser(email), refreshLeaderboard()]);
+  }, [refreshLeaderboard, syncUser]);
+
+  useEffect(() => {
+    const sessionEmail = window.localStorage.getItem(AIMLVERSE_SESSION_KEY);
+    const cached = window.localStorage.getItem(AIMLVERSE_STORAGE_KEY);
+
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached) as PublicUser;
+        setState((current) => ({ ...current, ...toAppState(parsed), isLoggedIn: Boolean(sessionEmail) }));
+      } catch {
+        setState(toAppState(null));
+      }
+    }
+
+    if (sessionEmail) {
+      void syncAll(sessionEmail).finally(() => setIsHydrated(true));
+    } else {
+      void refreshLeaderboard().finally(() => setIsHydrated(true));
+    }
+  }, [refreshLeaderboard, syncAll]);
+
+  const getNewBadges = (previous: BadgeId[], next: BadgeId[]) =>
+    next.filter((badgeId) => !previous.includes(badgeId));
+
+  const applyServerUser = useCallback(async (user: PublicUser) => {
+    const previousBadges = state.badgesUnlocked;
+    const nextState = {
+      ...toAppState(user),
+      leaderboardUsers: state.leaderboardUsers
+    };
+    setState(nextState);
+    window.localStorage.setItem(AIMLVERSE_STORAGE_KEY, JSON.stringify(user));
+    window.localStorage.setItem(AIMLVERSE_SESSION_KEY, user.email);
+
+    getNewBadges(previousBadges, nextState.badgesUnlocked).forEach((badgeId) => {
       addToast({
         id: createId("badge"),
         title: "Badge Unlocked!",
@@ -109,265 +162,261 @@ export function AimlverseProvider({ children }: { children: React.ReactNode }) {
       });
     });
 
-    return { next, unlockedBadges };
-  }, [addToast, state]);
+    await refreshLeaderboard();
+    return nextState;
+  }, [addToast, refreshLeaderboard, state.badgesUnlocked, state.leaderboardUsers]);
 
-  const registerUser = useCallback((userName: string, email: string, password: string) => {
-    if (!userName.trim() || !email.trim() || !password.trim()) {
-      return { success: false, message: "Fill in all fields." };
+  const registerUser = useCallback(async (userName: string, email: string, password: string) => {
+    try {
+      const data = await fetchJson<{ success: true; user: PublicUser }>("/api/auth/register", {
+        method: "POST",
+        body: JSON.stringify({ name: userName, email, password })
+      });
+      await applyServerUser(data.user);
+      addToast({
+        id: createId("auth"),
+        title: "Account created",
+        description: "You are now logged in and ready to explore AIMLverse.",
+        tone: "success"
+      });
+      return { success: true };
+    } catch (error) {
+      return { success: false, message: error instanceof Error ? error.message : "Registration failed." };
     }
+  }, [addToast, applyServerUser]);
 
-    updateState((current) => registerSession(current, userName.trim(), email.trim().toLowerCase(), password));
-    addToast({
-      id: createId("auth"),
-      title: "Account created",
-      description: "You are now logged in and ready to explore AIMLverse.",
-      tone: "success"
-    });
-    return { success: true };
-  }, [addToast, updateState]);
-
-  const loginUser = useCallback((email: string, password: string) => {
-    const storedUser = getStoredUser(state);
-
-    if (!storedUser) {
-      return { success: false, message: "No account found yet. Register first." };
+  const loginUser = useCallback(async (email: string, password: string) => {
+    try {
+      const data = await fetchJson<{ success: true; user: PublicUser }>("/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ email, password })
+      });
+      await applyServerUser(data.user);
+      addToast({
+        id: createId("auth"),
+        title: "Welcome back",
+        description: `Logged in as ${data.user.name}.`,
+        tone: "success"
+      });
+      return { success: true };
+    } catch (error) {
+      return { success: false, message: error instanceof Error ? error.message : "Login failed." };
     }
-
-    if (storedUser.email !== email.trim().toLowerCase() || storedUser.password !== password) {
-      return { success: false, message: "Email or password is incorrect." };
-    }
-
-    updateState((current) => loginSession(current));
-    addToast({
-      id: createId("auth"),
-      title: "Welcome back",
-      description: `Logged in as ${storedUser.userName}.`,
-      tone: "success"
-    });
-    return { success: true };
-  }, [addToast, state, updateState]);
+  }, [addToast, applyServerUser]);
 
   const logoutUser = useCallback(() => {
-    setState((current) => logoutSession(current));
+    window.localStorage.removeItem(AIMLVERSE_SESSION_KEY);
+    setState((current) => ({ ...current, isLoggedIn: false }));
     addToast({
       id: createId("auth"),
       title: "Logged out",
-      description: "Your progress is still saved locally on this device.",
+      description: "The local session ended, but your backend profile is still saved.",
       tone: "info"
     });
   }, [addToast]);
 
-  const claimDailyXp = useCallback(() => {
-    const today = getToday();
+  const requireEmail = useCallback(
+    () => state.email || window.localStorage.getItem(AIMLVERSE_SESSION_KEY) || "",
+    [state.email]
+  );
 
-    if (state.dailyXpClaimedDate === today) {
-      return { success: false, message: "Today's XP has already been claimed." };
+  const claimDailyXp = useCallback(async () => {
+    try {
+      const email = requireEmail();
+      if (!email) {
+        throw new Error("Login required.");
+      }
+      const today = getToday();
+      if (state.dailyXpClaimedDate === today) {
+        return { success: false, message: "Today's XP has already been claimed." };
+      }
+      const data = await fetchJson<{ success: true; user: PublicUser }>("/api/user/update", {
+        method: "POST",
+        body: JSON.stringify({
+          email,
+          xp: 100,
+          dailyXpClaimedDate: today,
+          dailyActivityDate: today
+        })
+      });
+      await applyServerUser(data.user);
+      addToast({
+        id: createId("xp"),
+        title: "Daily XP claimed",
+        description: "+100 XP added to your profile.",
+        tone: "success"
+      });
+      return { success: true };
+    } catch (error) {
+      return { success: false, message: error instanceof Error ? error.message : "Unable to claim XP." };
+    }
+  }, [addToast, applyServerUser, requireEmail, state.dailyXpClaimedDate]);
+
+  const completeModuleLesson = useCallback(async (moduleId: ModuleId) => {
+    const email = requireEmail();
+    if (!email) {
+      return { unlockedBadges: [], completedModule: false };
     }
 
-    updateState((current) =>
-      addDailyActivity({
-        ...current,
-        xp: current.xp + 100,
-        dailyXpClaimedDate: today
-      })
-    );
-    addToast({
-      id: createId("xp"),
-      title: "Daily XP claimed",
-      description: "+100 XP added to your profile.",
-      tone: "success"
-    });
-    return { success: true };
-  }, [addToast, state.dailyXpClaimedDate, updateState]);
+    const currentLessons = state.moduleLessonsCompleted[moduleId] ?? 0;
+    const nextLessons = Math.min(3, currentLessons + 1);
+    const isCompleted = nextLessons === 3 && !state.completedModules.includes(moduleId);
+    const moduleDefinition = moduleDefinitions.find((module) => module.id === moduleId);
+    const previousBadges = state.badgesUnlocked;
 
-  const completeModuleLesson = useCallback((moduleId: ModuleId) => {
-    const result = updateState((current) => {
-      if (!isModuleUnlocked(moduleId, current)) {
-        return current;
-      }
-
-      const currentLessons = current.moduleLessonsCompleted[moduleId] ?? 0;
-      if (currentLessons >= 3) {
-        return current;
-      }
-
-      const nextLessons = currentLessons + 1;
-      const moduleDefinition = moduleDefinitions.find((module) => module.id === moduleId);
-      const isModuleNowComplete = nextLessons === 3;
-
-      return addDailyActivity({
-        ...current,
+    const data = await fetchJson<{ success: true; user: PublicUser }>("/api/user/update", {
+      method: "POST",
+      body: JSON.stringify({
+        email,
         currentModule: moduleId,
-        xp: current.xp + (isModuleNowComplete && moduleDefinition ? moduleDefinition.xpReward : 20),
-        streak: current.streak + (isModuleNowComplete ? 1 : 0),
-        completedModules: isModuleNowComplete && !current.completedModules.includes(moduleId)
-          ? [...current.completedModules, moduleId]
-          : current.completedModules,
-        moduleLessonsCompleted: {
-          ...current.moduleLessonsCompleted,
-          [moduleId]: nextLessons
-        }
-      });
+        moduleLessonIncrement: 1,
+        xp: isCompleted ? moduleDefinition?.xpReward ?? 0 : 20,
+        completedModule: isCompleted ? moduleId : undefined,
+        streakIncrement: isCompleted ? 1 : 0,
+        dailyActivityDate: getToday()
+      })
     });
 
-    const completedModule = result.next.completedModules.includes(moduleId) && !state.completedModules.includes(moduleId);
-
+    const nextState = await applyServerUser(data.user);
     addToast({
       id: createId("module"),
-      title: completedModule ? "Module completed" : "Lesson completed",
-      description: completedModule
-        ? "XP, streak, and unlock progress updated instantly."
-        : "Your module progress has been saved.",
+      title: isCompleted ? "Module completed" : "Lesson completed",
+      description: isCompleted ? "XP and unlock progress updated." : "Lesson progress saved.",
       tone: "success"
     });
 
     return {
-      unlockedBadges: result.unlockedBadges,
-      completedModule
+      unlockedBadges: getNewBadges(previousBadges, nextState.badgesUnlocked),
+      completedModule: isCompleted
     };
-  }, [addToast, state.completedModules, updateState]);
+  }, [addToast, applyServerUser, requireEmail, state.badgesUnlocked, state.completedModules, state.moduleLessonsCompleted]);
 
-  const recordQuizAttempt = useCallback((score: number, total: number) => {
+  const recordQuizAttempt = useCallback(async (score: number, total: number) => {
+    const email = requireEmail();
+    if (!email) {
+      return { unlockedBadges: [], xpAwarded: 0 };
+    }
     const percent = Math.round((score / total) * 100);
     const xpAwarded = 40 + score * 15 + (percent >= 80 ? 25 : 0);
-
-    const result = updateState((current) => {
-      const nextAttempts = current.quizAttempts + 1;
-      const cumulativeScore = current.quizAverage * current.quizAttempts + percent;
-      const nextAverage = Math.round(cumulativeScore / nextAttempts);
-
-      const historyEntry: QuizHistoryEntry = {
-        id: createId("quiz"),
-        score,
-        total,
-        percent,
-        createdAt: new Date().toISOString()
-      };
-
-      return addDailyActivity({
-        ...current,
-        xp: current.xp + xpAwarded,
-        quizAttempts: nextAttempts,
-        quizAverage: nextAverage,
-        quizHistory: [historyEntry, ...current.quizHistory].slice(0, 10)
-      });
+    const previousBadges = state.badgesUnlocked;
+    const data = await fetchJson<{ success: true; user: PublicUser }>("/api/user/update", {
+      method: "POST",
+      body: JSON.stringify({
+        email,
+        quizScore: score,
+        quizTotal: total,
+        xp: xpAwarded,
+        dailyActivityDate: getToday()
+      })
     });
+    const nextState = await applyServerUser(data.user);
+    return { unlockedBadges: getNewBadges(previousBadges, nextState.badgesUnlocked), xpAwarded };
+  }, [applyServerUser, requireEmail, state.badgesUnlocked]);
 
-    addToast({
-      id: createId("quiz"),
-      title: "Quiz saved",
-      description: `Scored ${percent}% and earned +${xpAwarded} XP.`,
-      tone: "success"
-    });
-
-    return { unlockedBadges: result.unlockedBadges, xpAwarded };
-  }, [addToast, updateState]);
-
-  const recordGameResult = useCallback((game: string, won: boolean, score: number) => {
+  const recordGameResult = useCallback(async (game: string, won: boolean, score: number) => {
+    const email = requireEmail();
+    if (!email) {
+      return { unlockedBadges: [], xpAwarded: 0 };
+    }
     const xpAwarded = won ? 55 : 20;
-
-    const result = updateState((current) =>
-      addDailyActivity({
-        ...current,
-        xp: current.xp + xpAwarded,
-        gamesPlayed: current.gamesPlayed + 1,
-        gamesWon: current.gamesWon + (won ? 1 : 0),
-        bestScore: Math.max(current.bestScore, score)
+    const previousBadges = state.badgesUnlocked;
+    const data = await fetchJson<{ success: true; user: PublicUser }>("/api/user/update", {
+      method: "POST",
+      body: JSON.stringify({
+        email,
+        gameWon: won,
+        gameName: game,
+        gameScore: score,
+        xp: xpAwarded,
+        dailyActivityDate: getToday()
       })
-    );
-
-    addToast({
-      id: createId("game"),
-      title: won ? `${game} won` : `${game} played`,
-      description: won ? `Great run. +${xpAwarded} XP added.` : `Good try. +${xpAwarded} XP for practice.`,
-      tone: won ? "success" : "info"
     });
+    const nextState = await applyServerUser(data.user);
+    return { unlockedBadges: getNewBadges(previousBadges, nextState.badgesUnlocked), xpAwarded };
+  }, [applyServerUser, requireEmail, state.badgesUnlocked]);
 
-    return { unlockedBadges: result.unlockedBadges, xpAwarded };
-  }, [addToast, updateState]);
+  const askMentor = useCallback(async (question: string) => {
+    try {
+      const mentorData = await fetchJson<{ success: true; reply: string; topic: string }>("/api/mentor", {
+        method: "POST",
+        body: JSON.stringify({ message: question })
+      });
 
-  const recordMentorExchange = useCallback((question: string, answer: string, topic: string) => {
-    const result = updateState((current) =>
-      addDailyActivity({
-        ...current,
-        xp: current.xp + 12,
-        messagesCount: current.messagesCount + 1,
-        topicsAsked: current.topicsAsked.includes(topic)
-          ? current.topicsAsked
-          : [...current.topicsAsked, topic],
-        chatHistory: [
-          ...current.chatHistory,
-          {
-            id: createId("chat-user"),
-            role: "user" as const,
-            content: question,
-            topic,
-            createdAt: new Date().toISOString()
-          },
-          {
-            id: createId("chat-assistant"),
-            role: "assistant" as const,
-            content: answer,
-            topic,
-            createdAt: new Date().toISOString()
-          }
-        ].slice(-30) as ChatEntry[]
-      })
-    );
+      const email = requireEmail();
+      if (email) {
+        const chatEntry: ChatEntry[] = [
+          { id: createId("chat-user"), role: "user", content: question, topic: mentorData.topic, createdAt: new Date().toISOString() },
+          { id: createId("chat-assistant"), role: "assistant", content: mentorData.reply, topic: mentorData.topic, createdAt: new Date().toISOString() }
+        ];
+        const data = await fetchJson<{ success: true; user: PublicUser }>("/api/user/update", {
+          method: "POST",
+          body: JSON.stringify({
+            email,
+            xp: 12,
+            chatEntry,
+            topicAsked: mentorData.topic,
+            messagesCountIncrement: 1,
+            dailyActivityDate: getToday()
+          })
+        });
+        await applyServerUser(data.user);
+      }
 
-    addToast({
-      id: createId("mentor"),
-      title: "Mentor updated",
-      description: "Question saved to shared learning history.",
-      tone: "success"
-    });
+      return { success: true, answer: mentorData.reply, topic: mentorData.topic };
+    } catch (error) {
+      return { success: false, message: error instanceof Error ? error.message : "Mentor request failed." };
+    }
+  }, [applyServerUser, requireEmail]);
 
-    return { unlockedBadges: result.unlockedBadges };
-  }, [addToast, updateState]);
-
-  const recordSimulation = useCallback((type: "spam" | "image" | "student", input: string, resultText: string) => {
-    const entry: SimulationEntry = {
+  const recordSimulation = useCallback(async (type: "spam" | "image" | "student", input: string, result: string) => {
+    const email = requireEmail();
+    if (!email) {
+      return;
+    }
+    const simulationEntry: SimulationEntry = {
       id: createId("sim"),
       type,
       input,
-      result: resultText,
+      result,
       createdAt: new Date().toISOString()
     };
-
-    setState((current) =>
-      deriveState(
-        addDailyActivity({
-          ...current,
-          xp: current.xp + 18,
-          simulationHistory: [entry, ...current.simulationHistory].slice(0, 12)
-        })
-      )
-    );
-
-    addToast({
-      id: createId("sim"),
-      title: "Simulation recorded",
-      description: "This demo result is now part of the live profile history.",
-      tone: "success"
+    const data = await fetchJson<{ success: true; user: PublicUser }>("/api/user/update", {
+      method: "POST",
+      body: JSON.stringify({
+        email,
+        xp: 18,
+        simulationEntry,
+        dailyActivityDate: getToday()
+      })
     });
-  }, [addToast]);
+    await applyServerUser(data.user);
+  }, [applyServerUser, requireEmail]);
 
-  const leaderboard = useMemo(() => getUserLeaderboard(state), [state]);
+  const leaderboard = useMemo(
+    () =>
+      getUserLeaderboard(
+        state.leaderboardUsers.filter((user) => user.id !== state.email),
+        state.isLoggedIn ? { name: state.userName, xp: state.xp } : undefined
+      ),
+    [state.email, state.isLoggedIn, state.leaderboardUsers, state.userName, state.xp]
+  );
 
-  const stats = useMemo(() => ({
-    xp: state.xp,
-    level: state.level,
-    rank: state.rank,
-    completedModuleCount: getCompletedModuleCount(state),
-    totalModules: moduleDefinitions.length,
-    quizAverage: state.quizAverage,
-    gamesWon: state.gamesWon,
-    gamesPlayed: state.gamesPlayed,
-    streak: state.streak,
-    badgesEarned: state.badgesUnlocked.length,
-    dailyXpClaimed: state.dailyXpClaimedDate === getToday()
-  }), [state]);
+  const stats = useMemo(
+    () => ({
+      xp: state.xp,
+      level: state.level,
+      rank: state.rank,
+      completedModuleCount: getCompletedModuleCount(state),
+      totalModules: moduleDefinitions.length,
+      quizAverage: state.quizAverage,
+      gamesWon: state.gamesWon,
+      gamesPlayed: state.gamesPlayed,
+      streak: state.streak,
+      badgesEarned: state.badgesUnlocked.length,
+      dailyXpClaimed: state.dailyXpClaimedDate === getToday()
+    }),
+    [state]
+  );
 
   const value = useMemo<AimlverseContextValue>(() => ({
     state,
@@ -383,12 +432,13 @@ export function AimlverseProvider({ children }: { children: React.ReactNode }) {
     completeModuleLesson,
     recordQuizAttempt,
     recordGameResult,
-    recordMentorExchange,
+    askMentor,
     recordSimulation,
     addToast,
     dismissToast
   }), [
     addToast,
+    askMentor,
     claimDailyXp,
     completeModuleLesson,
     dismissToast,
@@ -397,7 +447,6 @@ export function AimlverseProvider({ children }: { children: React.ReactNode }) {
     loginUser,
     logoutUser,
     recordGameResult,
-    recordMentorExchange,
     recordQuizAttempt,
     recordSimulation,
     registerUser,

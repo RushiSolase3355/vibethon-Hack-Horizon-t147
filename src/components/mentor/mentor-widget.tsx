@@ -67,7 +67,7 @@ function getMentorReply(input: string) {
 }
 
 export function MentorWidget() {
-  const { recordMentorExchange } = useAimlverseState();
+  const { askMentor } = useAimlverseState();
   const [isOpen, setIsOpen] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
   const [input, setInput] = useState("");
@@ -96,13 +96,16 @@ export function MentorWidget() {
     setIsThinking(true);
 
     window.setTimeout(() => {
-      const reply = getMentorReply(trimmed);
-      setMessages((current) => [
-        ...current,
-        { id: createId(), role: "assistant", content: reply.answer }
-      ]);
-      recordMentorExchange(trimmed, reply.answer, reply.topic);
-      setIsThinking(false);
+      void (async () => {
+        const fallback = getMentorReply(trimmed);
+        const result = await askMentor(trimmed);
+        const answer = result.success ? result.answer ?? fallback.answer : fallback.answer;
+        setMessages((current) => [
+          ...current,
+          { id: createId(), role: "assistant", content: answer }
+        ]);
+        setIsThinking(false);
+      })();
     }, 650);
   };
 
