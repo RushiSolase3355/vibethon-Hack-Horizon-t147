@@ -4,8 +4,8 @@
     "name": "Rushikesh",
     "email": "rushisolase3@gmail.com",
     "password": "123456789",
-    "xp": 120,
-    "level": 1,
+    "xp": 338,
+    "level": 2,
     "rank": 1,
     "completedModules": [],
     "currentModule": "intro-ai",
@@ -17,19 +17,37 @@
       "nlp": 0,
       "computer-vision": 0
     },
-    "quizScores": [],
-    "quizAverage": 0,
-    "quizAttempts": 0,
-    "quizHistory": [],
-    "gamesPlayed": 0,
-    "gamesWon": 0,
-    "bestScore": 0,
+    "quizScores": [
+      40
+    ],
+    "quizAverage": 40,
+    "quizAttempts": 1,
+    "quizHistory": [
+      {
+        "id": "quiz-1776242670154-w502d",
+        "score": 2,
+        "total": 5,
+        "percent": 40,
+        "createdAt": "2026-04-15T08:44:30.154Z"
+      }
+    ],
+    "gamesPlayed": 3,
+    "gamesWon": 2,
+    "bestScore": 3,
     "streak": 0,
     "badges": [
       "first-login"
     ],
     "chatHistory": [],
-    "simulationHistory": [],
+    "simulationHistory": [
+      {
+        "id": "sim-1776242720171-ilc1e",
+        "type": "spam",
+        "input": "Win a free prize now",
+        "result": "Spam - strong promotional triggers detected",
+        "createdAt": "2026-04-15T08:45:20.171Z"
+      }
+    ],
     "dailyActivity": [
       "2026-04-15"
     ],
