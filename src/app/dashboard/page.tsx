@@ -1,4 +1,5 @@
-import { RoutePlaceholder } from "@/components/sections/route-placeholder";
+import { DashboardExperience } from "@/components/platform/dashboard-experience";
+import { PlatformShell } from "@/components/platform/platform-shell";
 
 export const metadata = {
   title: "Dashboard | AIMLverse"
@@ -6,10 +7,8 @@ export const metadata = {
 
 export default function DashboardPage() {
   return (
-    <RoutePlaceholder
-      description="Progress tracking, XP, streaks, badges, and learning momentum will arrive in Phase 2."
-      eyebrow="Commit 2 route ready"
-      title="Your AI learning dashboard is queued for the next checkpoint."
-    />
+    <PlatformShell>
+      <DashboardExperience />
+    </PlatformShell>
   );
 }
