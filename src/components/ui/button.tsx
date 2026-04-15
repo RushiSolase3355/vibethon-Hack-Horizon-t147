@@ -7,14 +7,16 @@ type ButtonProps = {
   className?: string;
   variant?: "primary" | "secondary";
   size?: "sm" | "md";
-};
+} & React.ButtonHTMLAttributes<HTMLButtonElement>;
 
 export function Button({
   children,
   href,
   className,
   variant = "primary",
-  size = "md"
+  size = "md",
+  type = "button",
+  ...props
 }: ButtonProps) {
   const classes = cn(
     "inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition duration-200 focus:outline-none focus:ring-2 focus:ring-cyanGlow focus:ring-offset-2 focus:ring-offset-midnight",
@@ -33,5 +35,9 @@ export function Button({
     );
   }
 
-  return <button className={classes}>{children}</button>;
+  return (
+    <button className={classes} type={type} {...props}>
+      {children}
+    </button>
+  );
 }

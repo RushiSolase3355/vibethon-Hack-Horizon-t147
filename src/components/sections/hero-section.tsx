@@ -4,8 +4,9 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import { ArrowRight, BrainCircuit, Gamepad2, PlayCircle, Sparkles, Trophy, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAimlverseState } from "@/hooks/use-aimlverse-state";
 
-const stats = [
+const previewStats = [
   { label: "12+ Modules", icon: BrainCircuit },
   { label: "3 Mini Games", icon: Gamepad2 },
   { label: "500+ Learners", icon: Users },
@@ -13,6 +14,17 @@ const stats = [
 ];
 
 export function HeroSection() {
+  const { state, stats } = useAimlverseState();
+
+  const liveStats = state.isLoggedIn
+    ? [
+        { label: `${stats.xp} XP`, icon: BrainCircuit },
+        { label: `Level ${stats.level}`, icon: Trophy },
+        { label: `${stats.completedModuleCount} Modules`, icon: Gamepad2 },
+        { label: `Rank #${stats.rank}`, icon: Users }
+      ]
+    : previewStats;
+
   return (
     <section className="relative flex min-h-[88vh] items-center overflow-hidden pt-24">
       <Image
@@ -43,22 +55,38 @@ export function HeroSection() {
             </span>
           </h1>
           <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-200 sm:text-xl">
-            AIMLverse turns AI and machine learning into guided missions, quick experiments, and
-            progress-based challenges that are easy to demo and fun to complete.
+            {state.isLoggedIn
+              ? `Welcome back, ${state.userName}. Your AIMLverse profile is live with shared progress across modules, quiz, mentor, games, and simulations.`
+              : "AIMLverse turns AI and machine learning into guided missions, quick experiments, and progress-based challenges that are easy to demo and fun to complete."}
           </p>
           <div className="mt-9 flex flex-col gap-4 sm:flex-row">
-            <Button href="/register">
-              Start the journey
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-            <Button href="/login" variant="secondary">
-              <PlayCircle className="h-4 w-4" />
-              Continue demo
-            </Button>
+            {state.isLoggedIn ? (
+              <>
+                <Button href="/dashboard">
+                  Open Dashboard
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+                <Button href="/modules" variant="secondary">
+                  <PlayCircle className="h-4 w-4" />
+                  Continue Learning
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button href="/register">
+                  Start the journey
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+                <Button href="/login" variant="secondary">
+                  <PlayCircle className="h-4 w-4" />
+                  Continue demo
+                </Button>
+              </>
+            )}
           </div>
 
           <div className="mt-8 grid max-w-2xl grid-cols-2 gap-3 sm:grid-cols-4">
-            {stats.map((stat, index) => {
+            {(state.isLoggedIn ? liveStats : previewStats).map((stat, index) => {
               const Icon = stat.icon;
 
               return (
@@ -117,12 +145,10 @@ export function HeroSection() {
               ))}
             </div>
             <div className="mt-6 grid grid-cols-3 gap-3">
-              {["XP", "Streak", "Rank"].map((item, index) => (
-                <div className="rounded-lg border border-white/10 bg-white/[0.05] p-3" key={item}>
-                  <p className="text-xs text-slate-400">{item}</p>
-                  <p className="mt-1 text-lg font-black text-white">
-                    {index === 0 ? "1.2k" : index === 1 ? "08" : "#14"}
-                  </p>
+              {[state.isLoggedIn ? `${stats.xp}` : "1.2k", state.isLoggedIn ? `${state.streak}` : "08", state.isLoggedIn ? `#${stats.rank}` : "#14"].map((item, index) => (
+                <div className="rounded-lg border border-white/10 bg-white/[0.05] p-3" key={`${item}-${index}`}>
+                  <p className="text-xs text-slate-400">{index === 0 ? "XP" : index === 1 ? "Streak" : "Rank"}</p>
+                  <p className="mt-1 text-lg font-black text-white">{item}</p>
                 </div>
               ))}
             </div>

@@ -4,18 +4,24 @@ import Link from "next/link";
 import { BrainCircuit, Menu, X } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useAimlverseState } from "@/hooks/use-aimlverse-state";
 
 const navItems = [
   { href: "/", label: "Home" },
   { href: "/modules", label: "Modules" },
   { href: "/dashboard", label: "Dashboard" },
+  { href: "/mentor", label: "Mentor" },
+  { href: "/quiz", label: "Quiz" },
+  { href: "/game", label: "Game" },
+  { href: "/simulation", label: "Simulation" },
   { href: "/leaderboard", label: "Leaderboard" },
+  { href: "/playground", label: "Playground" },
   { href: "/#features", label: "Features" },
-  { href: "/login", label: "Login" }
 ];
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const { state, logoutUser } = useAimlverseState();
 
   return (
     <header className="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-midnight/70 backdrop-blur-2xl">
@@ -40,10 +46,21 @@ export function Navbar() {
           ))}
         </div>
 
-        <div className="hidden md:block">
-          <Button href="/register" size="sm">
-            Enter AIMLverse
-          </Button>
+        <div className="hidden items-center gap-3 md:flex">
+          {state.isLoggedIn ? (
+            <>
+              <span className="rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2 text-sm text-slate-200">
+                {state.userName}
+              </span>
+              <Button onClick={logoutUser} size="sm" variant="secondary">
+                Logout
+              </Button>
+            </>
+          ) : (
+            <Button href="/register" size="sm">
+              Enter AIMLverse
+            </Button>
+          )}
         </div>
 
         <button
@@ -69,9 +86,15 @@ export function Navbar() {
                 {item.label}
               </Link>
             ))}
-            <Button href="/register" size="sm">
-              Enter AIMLverse
-            </Button>
+            {state.isLoggedIn ? (
+              <Button onClick={logoutUser} size="sm" variant="secondary">
+                Logout
+              </Button>
+            ) : (
+              <Button href="/register" size="sm">
+                Enter AIMLverse
+              </Button>
+            )}
           </div>
         </div>
       ) : null}

@@ -3,22 +3,27 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { Clock3, Layers3, Star, X } from "lucide-react";
 import { type ModuleDefinition } from "@/data/platform-data";
+import { Button } from "@/components/ui/button";
 
 type ModuleModalProps = {
   module: ModuleDefinition | null;
-  progress: number;
-  isLoading: boolean;
+  lessonsCompleted: number;
+  selectedAnswer: string;
+  onAnswerSelect: (value: string) => void;
+  onAdvance: () => void;
   onClose: () => void;
-  onStartLearning: () => void;
 };
 
 export function ModuleModal({
   module,
-  progress,
-  isLoading,
-  onClose,
-  onStartLearning
+  lessonsCompleted,
+  selectedAnswer,
+  onAnswerSelect,
+  onAdvance,
+  onClose
 }: ModuleModalProps) {
+  const currentStep = Math.min(lessonsCompleted + 1, 3);
+
   return (
     <AnimatePresence>
       {module ? (
@@ -30,10 +35,9 @@ export function ModuleModal({
         >
           <motion.div
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            className="glass relative w-full max-w-2xl rounded-lg border border-cyanGlow/20 p-6 shadow-[0_0_60px_rgba(45,212,255,0.16)]"
+            className="glass relative w-full max-w-3xl rounded-lg border border-cyanGlow/20 p-6 shadow-[0_0_60px_rgba(45,212,255,0.16)]"
             exit={{ opacity: 0, y: 12, scale: 0.98 }}
             initial={{ opacity: 0, y: 18, scale: 0.98 }}
-            transition={{ duration: 0.2 }}
           >
             <button
               className="absolute right-4 top-4 rounded-lg p-2 text-slate-400 transition hover:bg-white/10 hover:text-white"
@@ -47,15 +51,15 @@ export function ModuleModal({
               {module.level}
             </p>
             <h3 className="mt-3 text-3xl font-black text-white">{module.title}</h3>
-            <p className="mt-4 leading-7 text-slate-300">{module.description}</p>
+            <p className="mt-4 text-sm leading-7 text-slate-300">{module.description}</p>
 
-            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            <div className="mt-6 grid gap-3 sm:grid-cols-3">
               <div className="rounded-lg border border-white/10 bg-white/[0.05] p-4">
                 <div className="flex items-center gap-2 text-cyanGlow">
                   <Layers3 className="h-4 w-4" />
                   <span className="text-sm font-semibold">Lessons</span>
                 </div>
-                <p className="mt-2 text-lg font-bold text-white">{module.lessons} sessions</p>
+                <p className="mt-2 text-lg font-bold text-white">3 guided steps</p>
               </div>
               <div className="rounded-lg border border-white/10 bg-white/[0.05] p-4">
                 <div className="flex items-center gap-2 text-violet-300">
@@ -69,38 +73,68 @@ export function ModuleModal({
                   <Star className="h-4 w-4" />
                   <span className="text-sm font-semibold">XP reward</span>
                 </div>
-                <p className="mt-2 text-lg font-bold text-white">{module.xpReward} XP total</p>
-              </div>
-              <div className="rounded-lg border border-white/10 bg-white/[0.05] p-4">
-                <div className="flex items-center gap-2 text-amber-200">
-                  <Star className="h-4 w-4" />
-                  <span className="text-sm font-semibold">Difficulty</span>
-                </div>
-                <p className="mt-2 text-lg font-bold text-white">{module.difficulty}</p>
+                <p className="mt-2 text-lg font-bold text-white">{module.xpReward} XP</p>
               </div>
             </div>
 
-            <div className="mt-6">
-              <div className="flex items-center justify-between text-sm text-slate-300">
-                <span>Current progress</span>
-                <span>{progress}%</span>
-              </div>
-              <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-cyanGlow to-violetGlow transition-[width] duration-500"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
+            <div className="mt-8 rounded-lg border border-white/10 bg-white/[0.04] p-5">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyanGlow">
+                Lesson {currentStep}
+              </p>
+
+              {currentStep === 1 ? (
+                <>
+                  <h4 className="mt-3 text-2xl font-black text-white">Concept</h4>
+                  <p className="mt-4 leading-7 text-slate-300">{module.concept}</p>
+                </>
+              ) : null}
+
+              {currentStep === 2 ? (
+                <>
+                  <h4 className="mt-3 text-2xl font-black text-white">Example</h4>
+                  <p className="mt-4 text-cyan-100">{module.example}</p>
+                  <p className="mt-4 leading-7 text-slate-300">{module.walkthrough}</p>
+                </>
+              ) : null}
+
+              {currentStep === 3 ? (
+                <>
+                  <h4 className="mt-3 text-2xl font-black text-white">Mini Quiz</h4>
+                  <p className="mt-4 leading-7 text-slate-200">{module.quiz.question}</p>
+                  <div className="mt-5 grid gap-3">
+                    {module.quiz.options.map((option) => (
+                      <button
+                        className={`rounded-lg border px-4 py-3 text-left transition ${
+                          selectedAnswer === option
+                            ? "border-cyanGlow/40 bg-cyanGlow/10 text-white"
+                            : "border-white/10 bg-white/[0.04] text-slate-300 hover:border-cyanGlow/25"
+                        }`}
+                        key={option}
+                        onClick={() => onAnswerSelect(option)}
+                        type="button"
+                      >
+                        {option}
+                      </button>
+                    ))}
+                  </div>
+                  {selectedAnswer ? (
+                    <p className="mt-4 text-sm text-slate-400">{module.quiz.explanation}</p>
+                  ) : null}
+                </>
+              ) : null}
             </div>
 
-            <button
-              className="mt-8 inline-flex items-center justify-center rounded-lg bg-cyanGlow px-5 py-3 font-semibold text-midnight transition hover:-translate-y-1 hover:bg-white disabled:cursor-not-allowed disabled:bg-slate-500"
-              disabled={isLoading}
-              onClick={onStartLearning}
-              type="button"
-            >
-              {isLoading ? "Loading lesson..." : "Start Learning"}
-            </button>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Button
+                disabled={currentStep === 3 && selectedAnswer !== module.quiz.answer}
+                onClick={onAdvance}
+              >
+                {currentStep === 3 ? "Complete Module" : "Complete Lesson"}
+              </Button>
+              <Button onClick={onClose} variant="secondary">
+                Close
+              </Button>
+            </div>
           </motion.div>
         </motion.div>
       ) : null}

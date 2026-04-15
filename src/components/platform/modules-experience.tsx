@@ -1,56 +1,24 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { BadgeGrid } from "@/components/platform/badge-grid";
 import { ModuleCard } from "@/components/platform/module-card";
 import { ModuleModal } from "@/components/platform/module-modal";
 import { SectionHeading } from "@/components/platform/section-heading";
-import { ToastStack, type ToastItem } from "@/components/ui/toast-stack";
 import {
-  badgeDefinitions,
   filterTabs,
   moduleDefinitions,
-  type BadgeId,
   type ModuleDefinition,
   type ModuleLevel
 } from "@/data/platform-data";
 import { useAimlverseState } from "@/hooks/use-aimlverse-state";
 import { GlassCard } from "@/components/ui/glass-card";
 
-function createToast(title: string, description: string, tone: ToastItem["tone"] = "info"): ToastItem {
-  return {
-    id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-    title,
-    description,
-    tone
-  };
-}
-
 export function ModulesExperience() {
-  const { state, startLearning } = useAimlverseState();
+  const { state, isModuleUnlocked, getModuleProgress, completeModuleLesson } = useAimlverseState();
   const [activeFilter, setActiveFilter] = useState<ModuleLevel>("All");
   const [selectedModule, setSelectedModule] = useState<ModuleDefinition | null>(null);
-  const [loadingModuleId, setLoadingModuleId] = useState<string | null>(null);
-  const [toasts, setToasts] = useState<ToastItem[]>([]);
-  const [highlightedBadgeIds, setHighlightedBadgeIds] = useState<BadgeId[]>([]);
-
-  useEffect(() => {
-    if (!highlightedBadgeIds.length) {
-      return;
-    }
-
-    const timeout = window.setTimeout(() => setHighlightedBadgeIds([]), 2600);
-    return () => window.clearTimeout(timeout);
-  }, [highlightedBadgeIds]);
-
-  const dismissToast = (id: string) => {
-    setToasts((current) => current.filter((toast) => toast.id !== id));
-  };
-
-  const pushToast = (toast: ToastItem) => {
-    setToasts((current) => [...current, toast]);
-    window.setTimeout(() => dismissToast(toast.id), 3200);
-  };
+  const [selectedAnswer, setSelectedAnswer] = useState("");
 
   const filteredModules = useMemo(() => {
     if (activeFilter === "All") {
@@ -62,79 +30,39 @@ export function ModulesExperience() {
 
   const groupedModules = useMemo(() => {
     const groups: Record<string, ModuleDefinition[]> = {};
-
     filteredModules.forEach((module) => {
       if (!groups[module.level]) {
         groups[module.level] = [];
       }
-
       groups[module.level].push(module);
     });
-
     return groups;
   }, [filteredModules]);
 
-  const handleOpen = (module: ModuleDefinition) => {
-    setLoadingModuleId(module.id);
-    window.setTimeout(() => {
-      setSelectedModule(module);
-      setLoadingModuleId(null);
-    }, 220);
-  };
-
-  const handleStartLearning = () => {
+  const handleAdvance = () => {
     if (!selectedModule) {
       return;
     }
 
-    setLoadingModuleId(selectedModule.id);
+    completeModuleLesson(selectedModule.id);
+    const nextLessons = (state.moduleLessonsCompleted[selectedModule.id] ?? 0) + 1;
 
-    window.setTimeout(() => {
-      const result = startLearning(selectedModule.id);
-      const progress = result.state.moduleProgress[selectedModule.id];
+    if (nextLessons >= 3) {
+      setSelectedModule(null);
+      setSelectedAnswer("");
+      return;
+    }
 
-      pushToast(
-        createToast(
-          "Lesson progress saved",
-          `${selectedModule.title} is now at ${progress}% progress.`,
-          "success"
-        )
-      );
-
-      if (result.unlockedBadges.length) {
-        setHighlightedBadgeIds(result.unlockedBadges);
-        result.unlockedBadges.forEach((badgeId) => {
-          const badge = badgeDefinitions.find((item) => item.id === badgeId);
-
-          if (badge) {
-            pushToast(createToast("Badge Unlocked!", badge.title, "badge"));
-          }
-        });
-      }
-
-      setSelectedModule((current) => {
-        if (!current) {
-          return current;
-        }
-
-        return {
-          ...current,
-          description: current.description
-        };
-      });
-
-      setLoadingModuleId(null);
-    }, 700);
+    setSelectedAnswer("");
   };
 
   return (
     <>
-      <ToastStack onDismiss={dismissToast} toasts={toasts} />
       <div className="mx-auto max-w-7xl">
         <SectionHeading
-          description="AIMLverse teaches through compact concepts, concrete examples, and visible progress, split across Beginner, Intermediate, and Advanced tracks."
+          description="Modules now follow a real learning flow with concept, example, and mini quiz steps. Completion unlocks XP, badges, streak progress, and the next module."
           eyebrow="Learning Modules"
-          title="Structured paths that make AI and ML easier to finish."
+          title="Structured tracks with real lesson flow and unlock logic."
         />
 
         <div className="mt-8 flex flex-wrap gap-3">
@@ -167,10 +95,10 @@ export function ModulesExperience() {
                   </div>
                   <p className="max-w-2xl text-base leading-7 text-slate-300">
                     {level === "Beginner"
-                      ? "Build intuition before touching deeper model behavior."
+                      ? "Build intuition first, then unlock richer model behavior."
                       : level === "Intermediate"
-                        ? "Move into model decisions, features, and learned patterns."
-                        : "Explore how AI tackles language and vision in modern systems."}
+                        ? "Move into prediction logic and layered learning."
+                        : "Tackle real language and vision workflows."}
                   </p>
                 </div>
 
@@ -179,11 +107,14 @@ export function ModulesExperience() {
                     <ModuleCard
                       example={module.example}
                       icon={module.icon}
-                      isLoading={loadingModuleId === module.id}
                       key={module.id}
                       level={module.level}
-                      onOpen={() => handleOpen(module)}
-                      progress={state.moduleProgress[module.id] ?? 0}
+                      locked={!isModuleUnlocked(module.id)}
+                      onOpen={() => {
+                        setSelectedModule(module);
+                        setSelectedAnswer("");
+                      }}
+                      progress={getModuleProgress(module.id)}
                       summary={module.summary}
                       title={module.title}
                     />
@@ -199,21 +130,19 @@ export function ModulesExperience() {
             <p className="text-sm font-semibold uppercase tracking-[0.24em] text-cyanGlow">
               Badge Progress
             </p>
-            <h2 className="mt-3 text-3xl font-black text-white">Every lesson can unlock something new</h2>
+            <h2 className="mt-3 text-3xl font-black text-white">Learning milestones unlock in real time</h2>
           </div>
-          <BadgeGrid
-            highlightedBadgeIds={highlightedBadgeIds}
-            unlockedBadges={state.unlockedBadges}
-          />
+          <BadgeGrid unlockedBadges={state.badgesUnlocked} />
         </section>
       </div>
 
       <ModuleModal
-        isLoading={loadingModuleId === selectedModule?.id}
+        lessonsCompleted={selectedModule ? state.moduleLessonsCompleted[selectedModule.id] ?? 0 : 0}
         module={selectedModule}
+        onAdvance={handleAdvance}
+        onAnswerSelect={setSelectedAnswer}
         onClose={() => setSelectedModule(null)}
-        onStartLearning={handleStartLearning}
-        progress={selectedModule ? state.moduleProgress[selectedModule.id] ?? 0 : 0}
+        selectedAnswer={selectedAnswer}
       />
     </>
   );

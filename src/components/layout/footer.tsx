@@ -16,6 +16,9 @@ export function Footer() {
           commit strategy.
         </p>
         <div className="flex gap-4 text-sm text-slate-300">
+          <Link className="hover:text-white" href="/playground">
+            Playground
+          </Link>
           <Link className="hover:text-white" href="/login">
             Login
           </Link>

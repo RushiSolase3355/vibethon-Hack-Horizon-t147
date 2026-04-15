@@ -1,5 +1,6 @@
-import { ArrowRight, type LucideIcon } from "lucide-react";
+import { Lock, type LucideIcon } from "lucide-react";
 import { GlassCard } from "@/components/ui/glass-card";
+import { Button } from "@/components/ui/button";
 
 type ModuleCardProps = {
   title: string;
@@ -7,7 +8,7 @@ type ModuleCardProps = {
   summary: string;
   example: string;
   progress: number;
-  isLoading?: boolean;
+  locked: boolean;
   onOpen: () => void;
   icon: LucideIcon;
 };
@@ -18,7 +19,7 @@ export function ModuleCard({
   summary,
   example,
   progress,
-  isLoading = false,
+  locked,
   onOpen,
   icon: Icon
 }: ModuleCardProps) {
@@ -29,7 +30,7 @@ export function ModuleCard({
           <Icon className="h-6 w-6 text-cyanGlow" />
         </div>
         <span className="rounded-lg border border-white/10 bg-white/[0.06] px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-slate-300">
-          {progress}% complete
+          {locked ? "Locked" : `${progress}% complete`}
         </span>
       </div>
       <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyanGlow">{level}</p>
@@ -39,18 +40,19 @@ export function ModuleCard({
       <div className="mt-5 h-2 overflow-hidden rounded-full bg-white/10">
         <div
           className="h-full rounded-full bg-gradient-to-r from-cyanGlow to-violetGlow transition-[width] duration-500"
-          style={{ width: `${progress}%` }}
+          style={{ width: `${locked ? 0 : progress}%` }}
         />
       </div>
-      <button
-        className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-white transition hover:text-cyanGlow disabled:cursor-not-allowed disabled:text-slate-500"
-        disabled={isLoading}
-        onClick={onOpen}
-        type="button"
-      >
-        {isLoading ? "Opening..." : "Continue Module"}
-        <ArrowRight className="h-4 w-4" />
-      </button>
+      {locked ? (
+        <div className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-slate-500">
+          <Lock className="h-4 w-4" />
+          Unlock by finishing the previous module
+        </div>
+      ) : (
+        <Button className="mt-5" onClick={onOpen} size="sm">
+          Continue Module
+        </Button>
+      )}
     </GlassCard>
   );
 }
